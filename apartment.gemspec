@@ -6,30 +6,54 @@ Gem::Specification.new do |s|
   s.name = %q{apartment}
   s.version = Apartment::VERSION
 
-  s.authors = ["Ryan Brunner", "Brad Robertson"]
-  s.summary = %q{A Ruby gem for managing database multitenancy}
-  s.description = %q{Apartment allows Rack applications to deal with database multitenancy through ActiveRecord}
-  s.email = %w{ryan@ryanbrunner.com bradleyrobertson@gmail.com}
-  s.files         = `git ls-files`.split("\n")
-  s.test_files    = `git ls-files -- {spec}/*`.split("\n")
+  s.authors       = ["Ryan Brunner", "Brad Robertson"]
+  s.summary       = %q{A Ruby gem for managing database multitenancy}
+  s.description   = %q{Apartment allows Rack applications to deal with database multitenancy through ActiveRecord}
+  s.email         = ["ryan@influitive.com", "brad@influitive.com"]
+  s.files         = `git ls-files`.split($/)
+  s.executables   = s.files.grep(%r{^bin/}).map{ |f| File.basename(f) }
+  s.test_files    = s.files.grep(%r{^(test|spec|features)/})
+  s.require_paths = ["lib"]
 
   s.homepage = %q{https://github.com/influitive/apartment}
   s.licenses = ["MIT"]
-  s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.3.7}
 
-  s.add_dependency 'activerecord',    '>= 3.1.2'   # must be >= 3.1.2 due to bug in prepared_statements
+  s.post_install_message = <<-MSG
+  ********************************
+
+  Apartment Deprecation Warning
+
+  `Apartment::Tenant.process` has been deprecated in favour of `Apartment::Tenant.switch`.
+  You must now always pass a block to `switch`.
+
+  To get the previous `switch` behaviour where you can switch to a tenant
+  without a block, use `Apartment::Tenant.switch!`.
+  This is to indicate that your call actually has a side affect of changing
+  the scope of your queries to that tenant.
+
+  ********************************
+  MSG
+
+  # must be >= 3.1.2 due to bug in prepared_statements
+  s.add_dependency 'activerecord',    '>= 3.1.2', '< 6.0'
   s.add_dependency 'rack',            '>= 1.3.6'
 
-  s.add_development_dependency 'pry', '~> 0.9.9'
-  s.add_development_dependency 'rails', '>= 3.1.2'
-  s.add_development_dependency 'rake', '~> 0.9.2'
-  s.add_development_dependency 'sqlite3'
-  s.add_development_dependency 'rspec', '~> 2.10.0'
-  s.add_development_dependency 'rspec-rails', '~> 2.10.0'
-  s.add_development_dependency 'capybara', '~> 1.0.0'
-  s.add_development_dependency 'pg', '>= 0.11.0'
-  s.add_development_dependency 'mysql2', '~> 0.3.10'
-  s.add_development_dependency 'delayed_job', '~> 3.0'
-  s.add_development_dependency 'delayed_job_active_record'
+  s.add_development_dependency 'appraisal'
+  s.add_development_dependency 'rake',         '~> 0.9'
+  s.add_development_dependency 'rspec',        '~> 3.4'
+  s.add_development_dependency 'rspec-rails',  '~> 3.4'
+  s.add_development_dependency 'capybara',     '~> 2.0'
+
+  if defined?(JRUBY_VERSION)
+    s.add_development_dependency 'activerecord-jdbc-adapter'
+    s.add_development_dependency 'activerecord-jdbcpostgresql-adapter'
+    s.add_development_dependency 'activerecord-jdbcmysql-adapter'
+    s.add_development_dependency 'jdbc-postgres', '9.2.1002'
+    s.add_development_dependency 'jdbc-mysql'
+    s.add_development_dependency 'jruby-openssl'
+  else
+    s.add_development_dependency 'mysql2', '~> 0.3.10'
+    s.add_development_dependency 'pg',     '>= 0.11.0'
+    s.add_development_dependency 'sqlite3'
+  end
 end

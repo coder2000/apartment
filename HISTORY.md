@@ -1,3 +1,167 @@
+# 1.2.0
+  * July 28, 2016
+
+  - Official Rails 5 support
+
+# 1.1.0
+  * May 26, 2016
+
+  - Reset tenant after each request
+  - [Support callbacks](https://github.com/influitive/apartment/commit/ff9c9d092a781026502f5997c0bbedcb5748bc83) on switch [cbeer]
+  - Preliminary support for [separate database hosts](https://github.com/influitive/apartment/commit/abdffbf8cd9fba87243f16c86390da13e318ee1f) [apneadiving]
+
+# 1.0.2
+  * July 2, 2015
+
+  - Fix pg_dump env vars - pull/208 [MitinPavel]
+  - Allow custom seed data file - pull/234 [typeoneerror]
+
+# 1.0.1
+  * April 28, 2015
+
+  - Fix `Apartment::Deprecation` which was rescuing all exceptions
+
+# 1.0.0
+  * Feb 3, 2015
+
+  - [BREAKING CHANGE] `Apartment::Tenant.process` is deprecated in favour of `Apartment::Tenant.switch`
+  - [BREAKING CHANGE] `Apartment::Tenant.switch` without a block is deprecated in favour of `Apartment::Tenant.switch!`
+  - Raise proper `TenantNotFound`, `TenantExists` exceptions
+  - Deprecate old `SchemaNotFound`, `DatabaseNotFound` exceptions
+
+# 0.26.1
+  * Jan 13, 2015
+
+  - Fixed [schema quoting bug](https://github.com/influitive/apartment/issues/198#issuecomment-69782651) [jonsgreen]
+
+# 0.26.0
+  * Jan 5, 2015
+
+  - Rails 4.2 support
+
+# 0.25.2
+  * Sept 8, 2014
+
+  - Heroku fix on `assets:precompile` - pull/169 [rabbitt]
+
+# 0.25.1
+  * July 17, 2014
+
+  - Fixed a few vestiges of Apartment::Database
+
+# 0.25.0
+  * July 3, 2014
+
+  - [BREAKING CHANGE] - `Apartment::Database` is not deprecated in favour of
+    `Apartment::Tenant`
+  - ActiveRecord (and Rails) 4.1 now supported
+  - A new sql based adapter that dumps the schema using sql
+
+# 0.24.3
+  * March 5, 2014
+
+  - Rake enhancements weren't removed from the generator template
+
+# 0.24.2
+  * February 24, 2014
+
+  - Better warnings if `apartment:migrate` is run
+
+# 0.24.1
+  * February 21, 2014
+
+  - requiring `apartment/tasks/enhancements` in an initializer doesn't work
+  - One can disable tenant migrations using `Apartment.db_migrate_tenants = false` in the Rakefile
+
+# 0.24
+  * February 21, 2014 (In honour of the Women's Gold Medal in Hockey at Sochi)
+
+  - [BREAKING CHANGE] `apartment:migrate` task no longer depends on `db:migrate`
+    - Instead, you can `require 'apartment/tasks/enhancements'` in your Apartment initializer
+    - This will enhance `rake db:migrate` to also run `apartment:migrate`
+    - You can now forget about ever running `apartment:migrate` again
+  - Numerous deprecations for things referencing the word 'database'
+    - This is an ongoing effort to completely replace 'database' with 'tenant' as a better abstraction
+    - Note the obvious `Apartment::Database` still exists but will hopefully become `Apartment::Tenant` soon
+
+# 0.23.2
+  * January 9, 2014
+
+  - Increased visibility of #parse_database_name warning
+
+# 0.23.1
+  * January 8, 2014
+
+  - Schema adapters now initialize with default and persistent schemas
+  - Deprecated Apartment::Elevators#parse_database_name
+
+# 0.23.0
+  * August 21, 2013
+
+  - Subdomain Elevator now allows for exclusions
+  - Delayed::Job has been completely removed
+
+# 0.22.1
+  * August 21, 2013
+
+  - Fix bug where if your ruby process importing the database schema is run
+    from a directory other than the app root, Apartment wouldn't know what
+    schema_migrations to insert into the database (Rails only)
+
+# 0.22.0
+  * June 9, 2013
+
+  - Numerous bug fixes:
+    - Mysql reset could connect to wrong database [eric88]
+    - Postgresql schema names weren't quoted properly [gdott9]
+    - Fixed error message on SchemaNotFound in `process`
+  - HostHash elevator allows mapping host based on hash contents [gdott9]
+  - Official Sidekiq support with the [apartment-sidekiq gem](https://github.com/influitive/apartment-sidekiq)
+
+
+# 0.21.1
+  * May 31, 2013
+
+  - Clearing the AR::QueryCache after switching databases.
+    - Fixes issue with stale model being loaded for schema adapters
+
+# 0.21.0
+  * April 24, 2013
+
+  - JDBC support!! [PetrolMan]
+
+# 0.20.0
+  * Feb 6, 2013
+
+  - Mysql now has a 'schema like' option to perform like Postgresql (default)
+    - This should be significantly more performant than using connections
+  - Psych is now supported for Delayed::Job yaml parsing
+
+# 0.19.2
+  * Jan 30, 2013
+
+  - Database schema file can now be set manually or skipped altogether
+
+# 0.19.1
+  * Jan 30, 2013
+
+  - Allow schema.rb import file to be specified in config or skip schema.rb import altogether
+
+# 0.19.0
+  * Dec 29, 2012
+
+  - Apartment is now threadsafe
+  - New postgis adapter [zonpantli]
+  - Removed ActionDispatch dependency for use with Rack apps (regression)
+
+# 0.18.0
+  * Nov 27, 2012
+
+  - Added `append_environment` config option [virtualstaticvoid]
+  - Cleaned up the readme and generator documentation
+  - Added `connection_class` config option [smashtank]
+  - Fixed a [bug](https://github.com/influitive/apartment/issues/17#issuecomment-10758327) in pg adapter when missing schema
+
 # 0.17.1
   * Oct 30, 2012
 
@@ -171,4 +335,3 @@
   * March 30, 2011 *
 
   - Original pass from Ryan
-

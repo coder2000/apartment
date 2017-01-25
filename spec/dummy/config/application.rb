@@ -14,11 +14,10 @@ module Dummy
     # Settings in config/environments/* take precedence over those specified here.
     # Application configuration should go into files in config/initializers
     # -- all .rb files in that directory are automatically loaded.
+    require 'apartment/elevators/subdomain'
+    require 'apartment/elevators/domain'
 
     config.middleware.use 'Apartment::Elevators::Subdomain'
-    config.middleware.use 'Apartment::Elevators::Domain'
-    # Our test for this middleware is using a query_string couldn't think of a better way to differentiate it from the other middleware
-    config.middleware.use 'Apartment::Elevators::Generic', Proc.new { |request| request.query_string.split('=').last if request.query_string.present? }
 
     # Custom directories with classes and modules you want to be autoloadable.
     config.autoload_paths += %W(#{config.root}/lib)

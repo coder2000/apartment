@@ -5,7 +5,7 @@ module Apartment
 
     def reset
       Apartment.excluded_models = nil
-      Apartment.use_postgres_schemas = nil
+      Apartment.use_schemas = nil
       Apartment.seed_after_create = nil
       Apartment.default_schema = nil
     end
@@ -25,8 +25,10 @@ module Apartment
       ActiveRecord::Base.connection.execute("CREATE SCHEMA #{schema}")
     end
 
-    def load_schema
-      silence_stream(STDOUT){ load(Rails.root.join('db', 'schema.rb')) }
+    def load_schema(version = 3)
+      file = File.expand_path("../../schemas/v#{version}.rb", __FILE__)
+
+      silence_warnings{ load(file) }
     end
 
     def migrate

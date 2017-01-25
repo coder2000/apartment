@@ -1,22 +1,47 @@
 require 'apartment/railtie' if defined?(Rails)
+require 'active_support/core_ext/object/blank'
+require 'forwardable'
+require 'active_record'
+require 'apartment/tenant'
+require 'apartment/deprecation'
 
 module Apartment
 
   class << self
-    ACCESSOR_METHODS  = [:use_postgres_schemas, :seed_after_create, :prepend_environment]
-    WRITER_METHODS    = [:database_names, :excluded_models, :default_schema, :persistent_schemas]
+
+    extend Forwardable
+
+    ACCESSOR_METHODS  = [:use_schemas, :use_sql, :seed_after_create, :prepend_environment, :append_environment, :with_multi_server_setup ]
+    WRITER_METHODS    = [:tenant_names, :database_schema_file, :excluded_models, :default_schema, :persistent_schemas, :connection_class, :tld_length, :db_migrate_tenants, :seed_data_file]
 
     attr_accessor(*ACCESSOR_METHODS)
     attr_writer(*WRITER_METHODS)
+
+    def_delegators :connection_class, :connection, :connection_config, :establish_connection
 
     # configure apartment with available options
     def configure
       yield self if block_given?
     end
 
-    # Be careful not to use `return` here so both Proc and lambda can be used without breaking
-    def database_names
-      @database_names.respond_to?(:call) ? @database_names.call : @database_names
+    def tenant_names
+      extract_tenant_config.keys.map(&:to_s)
+    end
+
+    def tenants_with_config
+      extract_tenant_config
+    end
+
+    def db_config_for(tenant)
+      (tenants_with_config[tenant] || connection_config).with_indifferent_access
+    end
+
+    # Whether or not db:migrate should also migrate tenants
+    # defaults to true
+    def db_migrate_tenants
+      return @db_migrate_tenants if defined?(@db_migrate_tenants)
+
+      @db_migrate_tenants = true
     end
 
     # Default to empty array
@@ -25,63 +50,83 @@ module Apartment
     end
 
     def default_schema
-      @default_schema || "public"
+      @default_schema || "public" # TODO 'public' is postgres specific
     end
+    alias :default_tenant :default_schema
+    alias :default_tenant= :default_schema=
 
     def persistent_schemas
       @persistent_schemas || []
     end
 
-    # Reset all the config for Apartment
-    def reset
-      (ACCESSOR_METHODS + WRITER_METHODS).each{|method| instance_variable_set(:"@#{method}", nil) }
+    def connection_class
+      @connection_class || ActiveRecord::Base
     end
 
-  end
+    def database_schema_file
+      return @database_schema_file if defined?(@database_schema_file)
 
-  autoload :Database, 'apartment/database'
-  autoload :Migrator, 'apartment/migrator'
-  autoload :Reloader, 'apartment/reloader'
+      @database_schema_file = Rails.root.join('db', 'schema.rb')
+    end
 
-  module Adapters
-    autoload :AbstractAdapter, 'apartment/adapters/abstract_adapter'
-    # Specific adapters will be loaded dynamically based on adapter in config
-  end
+    def seed_data_file
+      return @seed_data_file if defined?(@seed_data_file)
 
-  module Elevators
-    autoload :Generic,    'apartment/elevators/generic'
-    autoload :Subdomain,  'apartment/elevators/subdomain'
-    autoload :Domain,     'apartment/elevators/domain'
-  end
+      @seed_data_file = "#{Rails.root}/db/seeds.rb"
+    end
 
-  module Delayed
+    def tld_length
+      @tld_length || 1
+    end
 
-    autoload :Requirements, 'apartment/delayed_job/requirements'
+    # Reset all the config for Apartment
+    def reset
+      (ACCESSOR_METHODS + WRITER_METHODS).each{|method| remove_instance_variable(:"@#{method}") if instance_variable_defined?(:"@#{method}") }
+    end
 
-    module Job
-      autoload :Hooks, 'apartment/delayed_job/hooks'
+    def database_names
+      Apartment::Deprecation.warn "[Deprecation Warning] `database_names` is now deprecated, please use `tenant_names`"
+      tenant_names
+    end
+
+    def database_names=(names)
+      Apartment::Deprecation.warn "[Deprecation Warning] `database_names=` is now deprecated, please use `tenant_names=`"
+      self.tenant_names=(names)
+    end
+
+    def use_postgres_schemas
+      Apartment::Deprecation.warn "[Deprecation Warning] `use_postgresql_schemas` is now deprecated, please use `use_schemas`"
+      use_schemas
+    end
+
+    def use_postgres_schemas=(to_use_or_not_to_use)
+      Apartment::Deprecation.warn "[Deprecation Warning] `use_postgresql_schemas=` is now deprecated, please use `use_schemas=`"
+      self.use_schemas = to_use_or_not_to_use
+    end
+
+    def extract_tenant_config
+      return {} unless @tenant_names
+      values = @tenant_names.respond_to?(:call) ? @tenant_names.call : @tenant_names
+      unless values.is_a? Hash
+        values = values.each_with_object({}) do |tenant, hash|
+          hash[tenant] = connection_config
+        end
+      end
+      values.with_indifferent_access
+    rescue ActiveRecord::StatementInvalid
+      {}
     end
   end
 
   # Exceptions
-  class ApartmentError < StandardError; end
+  ApartmentError = Class.new(StandardError)
 
   # Raised when apartment cannot find the adapter specified in <tt>config/database.yml</tt>
-  class AdapterNotFound < ApartmentError; end
+  AdapterNotFound = Class.new(ApartmentError)
 
-  # Raised when database cannot find the specified database
-  class DatabaseNotFound < ApartmentError; end
+  # Tenant specified is unknown
+  TenantNotFound = Class.new(ApartmentError)
 
-  # Raised when trying to create a database that already exists
-  class DatabaseExists < ApartmentError; end
-
-  # Raised when database cannot find the specified schema
-  class SchemaNotFound < ApartmentError; end
-
-  # Raised when trying to create a schema that already exists
-  class SchemaExists < ApartmentError; end
-
-  # Raised when an ActiveRecord object does not have the required database field on it
-  class DJSerializationError < ApartmentError; end
-
+  # The Tenant attempting to be created already exists
+  TenantExists = Class.new(ApartmentError)
 end

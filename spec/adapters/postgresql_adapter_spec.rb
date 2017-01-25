@@ -1,38 +1,61 @@
 require 'spec_helper'
 require 'apartment/adapters/postgresql_adapter'
 
-describe Apartment::Adapters::PostgresqlAdapter do
+describe Apartment::Adapters::PostgresqlAdapter, database: :postgresql do
+  unless defined?(JRUBY_VERSION)
 
-  let(:config){ Apartment::Test.config['connections']['postgresql'] }
-  subject{ Apartment::Database.postgresql_adapter config.symbolize_keys }
+    subject{ Apartment::Tenant.postgresql_adapter config }
 
-  context "using schemas" do
+    context "using schemas with schema.rb" do
 
-    before{ Apartment.use_postgres_schemas = true }
+      before{ Apartment.use_schemas = true }
 
-    # Not sure why, but somehow using let(:database_names) memoizes for the whole example group, not just each test
-    def database_names
-      ActiveRecord::Base.connection.execute("SELECT nspname FROM pg_namespace;").collect{|row| row['nspname']}
+      # Not sure why, but somehow using let(:tenant_names) memoizes for the whole example group, not just each test
+      def tenant_names
+        ActiveRecord::Base.connection.execute("SELECT nspname FROM pg_namespace;").collect { |row| row['nspname'] }
+      end
+
+      let(:default_tenant) { subject.switch { ActiveRecord::Base.connection.schema_search_path.gsub('"', '') } }
+
+      it_should_behave_like "a generic apartment adapter"
+      it_should_behave_like "a schema based apartment adapter"
     end
 
-    let(:default_database){ subject.process{ ActiveRecord::Base.connection.schema_search_path } }
+    context "using schemas with SQL dump" do
 
-    it_should_behave_like "a generic apartment adapter"
-    it_should_behave_like "a schema based apartment adapter"
-  end
+      before{ Apartment.use_schemas = true; Apartment.use_sql = true }
 
-  context "using databases" do
+      # Not sure why, but somehow using let(:tenant_names) memoizes for the whole example group, not just each test
+      def tenant_names
+        ActiveRecord::Base.connection.execute("SELECT nspname FROM pg_namespace;").collect { |row| row['nspname'] }
+      end
 
-    before{ Apartment.use_postgres_schemas = false }
+      let(:default_tenant) { subject.switch { ActiveRecord::Base.connection.schema_search_path.gsub('"', '') } }
 
-    # Not sure why, but somehow using let(:database_names) memoizes for the whole example group, not just each test
-    def database_names
-      connection.execute("select datname from pg_database;").collect{|row| row['datname']}
+      it_should_behave_like "a generic apartment adapter"
+      it_should_behave_like "a schema based apartment adapter"
+
+      it 'allows for dashes in the schema name' do
+        expect { Apartment::Tenant.create('has-dashes') }.to_not raise_error
+      end
+
+      after { Apartment::Tenant.drop('has-dashes') if Apartment.connection.schema_exists? 'has-dashes' }
     end
 
-    let(:default_database){ subject.process{ ActiveRecord::Base.connection.current_database } }
+    context "using connections" do
 
-    it_should_behave_like "a generic apartment adapter"
-    it_should_behave_like "a db based apartment adapter"
+      before{ Apartment.use_schemas = false }
+
+      # Not sure why, but somehow using let(:tenant_names) memoizes for the whole example group, not just each test
+      def tenant_names
+        connection.execute("select datname from pg_database;").collect { |row| row['datname'] }
+      end
+
+      let(:default_tenant) { subject.switch { ActiveRecord::Base.connection.current_database } }
+
+      it_should_behave_like "a generic apartment adapter"
+      it_should_behave_like "a generic apartment adapter able to handle custom configuration"
+      it_should_behave_like "a connection based apartment adapter"
+    end
   end
 end
